@@ -1,6 +1,6 @@
 // Cache estático + áudio (com limite) — simples e eficaz
-const STATIC = "static-v2";
-const AUDIO = "audio-v1";
+const STATIC = "static-v3";
+const AUDIO = "audio-v3";
 
 self.addEventListener("install", (e) => {
   e.waitUntil(

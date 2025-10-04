@@ -5,6 +5,8 @@ Todo o conteúdo da página é **configurável** via `assets/config/app.config.j
 
 ![Screenshot](./assets/img/readme-cover.png)
 
+![Screenshot](./assets/img/player-mobile-demo.gif)
+
 ---
 
 ## ✨ Principais recursos

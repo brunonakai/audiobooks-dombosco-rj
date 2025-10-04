@@ -7,16 +7,13 @@ async function loadConfig() {
     audio: {
       src: "assets/audio/fund1-alfabetizacao_com_significado.mp3",
       download: "assets/audio/fund1-alfabetizacao_com_significado.mp3",
-      title: "Faixa",
+      title: "Alfabetização com significado"
     },
     seo: {
       title: document.title || "Audiobook — Dom Bosco RJ",
-      description:
-        document
-          .querySelector('meta[name="description"]')
-          ?.getAttribute("content") || "",
+      description: document.querySelector('meta[name="description"]')?.getAttribute("content") || "",
       image: "assets/img/logo-colegio-db.png",
-      canonical: window.location.href,
+      canonical: window.location.href
     },
     ui: {
       kicker: null,
@@ -24,32 +21,41 @@ async function loadConfig() {
       pageSubtitle: null,
       lead: null,
       trackTitle: null,
-      sectionTitle: null,
+      sectionTitle: null
     },
-    articles: [], // [{title,text}, ...]
+    articles: [],
     links: {
       spotify: null,
       cta: null,
-      brand: null,
+      brand: null
     },
     contacts: {
       phone: null,
       whatsapp: null,
-      email: null,
-    },
+      email: null
+    }
   };
 
-  let fileCfg = {};
-  try {
-    const res = await fetch("assets/config/app.config.json?v=" + Date.now(), {
-      cache: "no-store",
-    });
-    if (res.ok) fileCfg = await res.json();
-  } catch (_) {}
+  // slug da página: index, ep1, ep2, etc.
+  const fileName = location.pathname.split("/").pop() || "index.html";
+  const slug = fileName.replace(/\.html?$/i, "") || "index";
 
-  // sobrescritas opcionais em env.js
-  const envCfg =
-    window.APP_ENV && typeof window.APP_ENV === "object" ? window.APP_ENV : {};
+  // ordem de tentativa: config específica da página -> config padrão
+  const candidates = [
+    `assets/config/${slug}.config.json?v=${Date.now()}`,
+    `assets/config/app.config.json?v=${Date.now()}`
+  ];
+
+  let fileCfg = {};
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (res.ok) { fileCfg = await res.json(); break; }
+    } catch (_) { /* tenta o próximo */ }
+  }
+
+  // overrides via env.js (opcional)
+  const envCfg = (window.APP_ENV && typeof window.APP_ENV === "object") ? window.APP_ENV : {};
 
   // merge raso
   const cfg = structuredClone(defaultCfg);
@@ -57,33 +63,29 @@ async function loadConfig() {
     Object.keys(src || {}).forEach((k) => {
       if (src[k] && typeof src[k] === "object" && !Array.isArray(src[k])) {
         target[k] = { ...target[k], ...src[k] };
-      } else if (Array.isArray(src[k])) {
-        target[k] = src[k].slice();
       } else if (src[k] != null) {
         target[k] = src[k];
       }
     });
   };
+
+  // aplica merges
   shallowMerge(cfg, fileCfg);
   shallowMerge(cfg.seo, fileCfg.seo || {});
   shallowMerge(cfg.ui, fileCfg.ui || {});
   shallowMerge(cfg.links, fileCfg.links || {});
   shallowMerge(cfg.contacts, fileCfg.contacts || {});
-  // audio e articles
-  if (fileCfg.audio) shallowMerge(cfg.audio, fileCfg.audio);
-  if (fileCfg.articles) cfg.articles = fileCfg.articles.slice();
 
   shallowMerge(cfg, envCfg);
   shallowMerge(cfg.seo, envCfg.seo || {});
   shallowMerge(cfg.ui, envCfg.ui || {});
   shallowMerge(cfg.links, envCfg.links || {});
   shallowMerge(cfg.contacts, envCfg.contacts || {});
-  if (envCfg.audio) shallowMerge(cfg.audio, envCfg.audio);
-  if (envCfg.articles) cfg.articles = envCfg.articles.slice();
 
   applyConfig(cfg);
   return cfg;
 }
+/* ============ /CONFIG LOADER ============ */
 
 function applyConfig(cfg) {
   /* ---- UI (textos) ---- */
