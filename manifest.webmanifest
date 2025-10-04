@@ -1,0 +1,15 @@
+{
+  "name": "Audiobook — Colégio Dom Bosco RJ",
+  "short_name": "Audiobook DBRJ",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0e1c33",
+  "theme_color": "#0e1c33",
+  "icons": [
+    {
+      "src": "assets/img/favicon.ico",
+      "sizes": "48x48 64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}

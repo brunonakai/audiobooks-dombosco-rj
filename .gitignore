@@ -1,0 +1,11 @@
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+dist/
+build/
+tmp/
+node_modules/
+.sw.js.map
+.env
+env.local
