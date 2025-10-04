@@ -91,30 +91,38 @@ window.APP_ENV = {
 };
 ```
 
-➕ Como criar uma nova página/episódio
+---
 
-Duplique index.html para pagina2.html (por exemplo).
+## ➕ Como criar uma nova página/episódio
 
-Crie um assets/config/app.config.json específico nessa nova pasta/página (ou use o mesmo caminho, conforme sua estrutura).
+- Duplique index.html para pagina2.html (por exemplo).
 
-Ajuste os campos audio, ui._, links._ e seo.\* para o novo episódio.
+- Crie um assets/config/app.config.json específico nessa nova pasta/página (ou use o mesmo caminho, conforme sua estrutura).
 
-Publique (GitHub Pages, servidor estático etc).
+- Ajuste os campos audio, ui._, links._ e seo.\* para o novo episódio.
+
+- Publique (GitHub Pages, servidor estático etc).
 
 Dica: mantenha o mesmo HTML base; a página será preenchida dinamicamente a partir do app.config.json.
 
-🚀 Rodando localmente
+---
+
+## 🚀 Rodando localmente
 
 Use qualquer servidor estático (ex.: VS Code Live Server ou npx serve).
 
 Abra http://localhost:PORT/.
 
-📦 Deploy
+---
+
+## 📦 Deploy
 
 GitHub Pages: ative Pages no repositório (branch main, pasta /root).
 
 Ou suba para qualquer hosting estático (Netlify, Vercel, S3, nginx, etc.).
 
-📝 Licença
+---
+
+## 📝 Licença
 
 Uso interno do Colégio Dom Bosco RJ.

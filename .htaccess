@@ -1,0 +1,23 @@
+# Ativa o mod_rewrite
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /audiobook/
+
+  # 1) Não reescreve se já for um arquivo ou diretório existente
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # 2) Evita reescrever assets e arquivos com ponto (css, js, png, mp3, sw.js etc.)
+  RewriteCond %{REQUEST_URI} \. [OR]
+  RewriteCond %{REQUEST_URI} ^/(assets|img|css|js|fonts)/ [NC]
+  RewriteRule ^ - [L]
+
+  # 3) (Opcional) Redireciona de /pagina.html → /pagina (canonical)
+  RewriteCond %{THE_REQUEST} \s/+audiobook/([^\s]+)\.html[\s?] [NC]
+  RewriteRule ^ %1 [R=301,L]
+
+  # 4) Reescrita interna: /pagina → /pagina.html
+  # aceita hífen, underscore e números; com ou sem a barra final
+  RewriteRule ^([A-Za-z0-9\-_]+)/?$ $1.html [L]
+</IfModule>

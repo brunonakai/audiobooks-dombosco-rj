@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Titulo</title>
+    <meta name="description" content="Descrição" />
+    <meta name="theme-color" content="#0e1c33" />
+    <meta property="og:title" content="Titulo" />
+    <meta property="og:description" content="Descrição" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="assets/img/logo-colegio-db.png" />
+    <link rel="canonical" href="https://plataforma.domboscorj.com.br/audiobook/" />
+    <link rel="icon" type="image/x-icon" href="assets/img/favicon.ico" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+  <body>
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="brand">
+        <a href="https://domboscorj.com.br/" target="_blank" rel="noopener">
+          <picture>
+            <source srcset="assets/img/logo-colegio-db-neg.avif" type="image/avif" />
+            <source srcset="assets/img/logo-colegio-db-neg.webp" type="image/webp" />
+            <img src="assets/img/logo-colegio-db-neg.png" alt="Colégio Dom Bosco" class="brand-img" />
+          </picture>
+        </a>
+      </div>
+      <div class="actions">
+        <button class="btn" id="shareBtn">Compartilhar</button>
+        <a class="btn primary spotify-btn" id="spotifyBtn" href="#" target="_blank" rel="noopener">
+          <span class="label-desktop">Ouvir no Spotify</span>
+          <span class="label-mobile">Spotify</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- Conteúdo (mesmo markup do index) -->
+    <main class="container">
+      <div class="grid">
+        <section>
+          <div class="kicker" id="kicker">…</div>
+          <h1 id="pageTitle">…</h1>
+          <p id="pageSubtitle"><strong>…</strong></p>
+          <p class="lead">…</p>
+        </section>
+
+        <section class="card" id="playerCard" aria-label="Reprodutor do audiobook">
+          <div class="title-row">
+            <span class="badge">🎵 <span class="note" id="trackTitle">Faixa</span></span>
+            <span class="timer"><span id="tCur">00:00</span> / <span id="tDur">--:--</span></span>
+          </div>
+          <div class="wave" aria-hidden="true">
+            <canvas id="wave"></canvas>
+            <div class="peak-pulse" aria-hidden="true"></div>
+          </div>
+          <div class="controls">
+            <button class="icon" id="back15" aria-label="Voltar 15s">
+              ↺ 15s
+            </button>
+            <button class="play primary" id="playPause">▶ Reproduzir</button>
+            <button class="icon" id="fwd15" aria-label="Avançar 15s">
+              15s ↻
+            </button>
+            <button class="rate" id="rate">1.00x</button>
+          </div>
+          <div class="progress" aria-label="Progresso">
+            <div class="bar" id="bar"></div>
+          </div>
+          <div class="row">
+            <div class="left">
+              <span class="label">🔊</span>
+              <input class="range" type="range" id="volume" min="0" max="1" step="0.01" value="1" aria-label="Volume" />
+            </div>
+            <div class="right">
+              <a class="download" id="downloadLink" href="#" download>Baixar audio</a>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="section-title">Sobre o aprendizado</div>
+      <div class="cards">
+        <article class="info">
+          <h3>🟢 …</h3>
+          <p class="quote">…</p>
+        </article>
+        <article class="info">
+          <h3>🟢 …</h3>
+          <p class="quote">…</p>
+        </article>
+        <article class="info">
+          <h3>🟢 …</h3>
+          <p class="quote">…</p>
+        </article>
+      </div>
+
+      <section class="enroll-cta">
+        <a class="enroll-card" id="ctaEnroll" href="#" target="_blank" rel="noopener">
+          <div class="enroll-text">
+            <strong>Matrículas 2026</strong>
+            <span>Garanta já a vaga do seu filho para o próximo ano letivo. Vagas limitadas!</span>
+          </div>
+          <span class="enroll-btn">Quero matricular</span>
+        </a>
+      </section>
+    </main>
+
+    <footer class="mini-footer">
+      <div class="mini-wrap">
+        <a class="mini-logo-link" href="https://domboscorj.com.br/" target="_blank" rel="noopener">
+          <picture>
+            <source srcset="assets/img/logo-colegio-db-neg.avif" type="image/avif" />
+            <source srcset="assets/img/logo-colegio-db-neg.webp" type="image/webp" />
+            <img class="mini-logo" src="assets/img/logo-colegio-db-neg.png" alt="Colégio Dom Bosco RJ" />
+          </picture>
+        </a>
+        <span>© 2026 Colégio Dom Bosco RJ • Todos os direitos reservados.</span>
+        <nav class="mini-links">
+          <a href="tel:+552141090710">Telefone</a>
+          <span class="dot">•</span>
+          <a href="https://wa.me/5521989886632" target="_blank" rel="noopener">WhatsApp</a>
+          <span class="dot">•</span>
+          <a href="mailto:contato@domboscorj.com.br">E-mail</a>
+        </nav>
+      </div>
+    </footer>
+
+    <audio id="player" preload="metadata">
+      <source id="audioSource" src="" type="audio/mpeg" />
+    </audio>
+
+    <script src="env.js"></script>
+    <script src="assets/js/app.js" defer></script>
+  </body>
+</html>

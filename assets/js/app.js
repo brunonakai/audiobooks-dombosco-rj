@@ -1,35 +1,14 @@
 // ==================== PLAYER + WAVEFORM (Canvas) com Detector de Picos ====================
 
-/* ============ CONFIG LOADER (JSON + ENV, por página) ============ */
-async function pickConfigUrl() {
-  // 1) Query param tem prioridade: ?config=assets/config/meu.json
-  const usp = new URLSearchParams(location.search);
-  const qp = usp.get("config");
-  if (qp) return qp;
-
-  // 2) Pelo nome do arquivo HTML (pagina1.html -> assets/config/pagina1.config.json)
-  //    index.html -> assets/config/index.config.json (se existir) senão cai no app.config.json
-  const file = (
-    location.pathname.split("/").pop() || "index.html"
-  ).toLowerCase();
-  const base = file.replace(/\.html?$/i, ""); // "pagina1", "index"
-  const candidate = `assets/config/${base}.config.json`;
-
-  // testa se existe; se 404, usamos o app.config.json
-  try {
-    const head = await fetch(candidate, { method: "GET", cache: "no-store" });
-    if (head.ok) return candidate;
-  } catch (_) {}
-
-  // 3) Fallback
-  return "assets/config/app.config.json";
-}
-
+/* ============ CONFIG LOADER (JSON + ENV) ============ */
 async function loadConfig() {
   const defaultCfg = {
     siteBaseUrl: window.location.origin + "/",
-    // pode ser string OU objeto { src, download, title }
-    audio: "assets/audio/fund1-alfabetizacao_com_significado.mp3",
+    audio: {
+      src: "assets/audio/fund1-alfabetizacao_com_significado.mp3",
+      download: "assets/audio/fund1-alfabetizacao_com_significado.mp3",
+      title: "Faixa",
+    },
     seo: {
       title: document.title || "Audiobook — Dom Bosco RJ",
       description:
@@ -47,24 +26,28 @@ async function loadConfig() {
       trackTitle: null,
       sectionTitle: null,
     },
+    articles: [], // [{title,text}, ...]
     links: {
       spotify: null,
       cta: null,
-      download: null,
+      brand: null,
+    },
+    contacts: {
+      phone: null,
+      whatsapp: null,
+      email: null,
     },
   };
 
   let fileCfg = {};
   try {
-    const cfgUrl = await pickConfigUrl();
-    const res = await fetch(
-      cfgUrl + (cfgUrl.includes("?") ? "&" : "?") + "v=" + Date.now(),
-      { cache: "no-store" }
-    );
+    const res = await fetch("assets/config/app.config.json?v=" + Date.now(), {
+      cache: "no-store",
+    });
     if (res.ok) fileCfg = await res.json();
   } catch (_) {}
 
-  // sobrescritas opcionais em env.js (se houver)
+  // sobrescritas opcionais em env.js
   const envCfg =
     window.APP_ENV && typeof window.APP_ENV === "object" ? window.APP_ENV : {};
 
@@ -74,6 +57,8 @@ async function loadConfig() {
     Object.keys(src || {}).forEach((k) => {
       if (src[k] && typeof src[k] === "object" && !Array.isArray(src[k])) {
         target[k] = { ...target[k], ...src[k] };
+      } else if (Array.isArray(src[k])) {
+        target[k] = src[k].slice();
       } else if (src[k] != null) {
         target[k] = src[k];
       }
@@ -83,18 +68,25 @@ async function loadConfig() {
   shallowMerge(cfg.seo, fileCfg.seo || {});
   shallowMerge(cfg.ui, fileCfg.ui || {});
   shallowMerge(cfg.links, fileCfg.links || {});
+  shallowMerge(cfg.contacts, fileCfg.contacts || {});
+  // audio e articles
+  if (fileCfg.audio) shallowMerge(cfg.audio, fileCfg.audio);
+  if (fileCfg.articles) cfg.articles = fileCfg.articles.slice();
 
   shallowMerge(cfg, envCfg);
   shallowMerge(cfg.seo, envCfg.seo || {});
   shallowMerge(cfg.ui, envCfg.ui || {});
   shallowMerge(cfg.links, envCfg.links || {});
+  shallowMerge(cfg.contacts, envCfg.contacts || {});
+  if (envCfg.audio) shallowMerge(cfg.audio, envCfg.audio);
+  if (envCfg.articles) cfg.articles = envCfg.articles.slice();
 
   applyConfig(cfg);
   return cfg;
 }
 
 function applyConfig(cfg) {
-  // ---- UI (textos)
+  /* ---- UI (textos) ---- */
   const $kicker =
     document.querySelector(".kicker") || document.getElementById("kicker");
   if ($kicker && cfg.ui.kicker) $kicker.textContent = cfg.ui.kicker;
@@ -109,66 +101,96 @@ function applyConfig(cfg) {
   const $lead = document.querySelector(".lead");
   if ($lead && cfg.ui.lead) $lead.textContent = cfg.ui.lead;
 
+  const $trackTitle = document.getElementById("trackTitle");
+  if ($trackTitle) {
+    $trackTitle.textContent =
+      cfg.ui.trackTitle || cfg.audio.title || $trackTitle.textContent;
+  }
+
   const $sectionTitle = document.querySelector(".section-title");
   if ($sectionTitle && cfg.ui.sectionTitle)
     $sectionTitle.textContent = cfg.ui.sectionTitle;
 
-  const $trackTitle = document.getElementById("trackTitle");
-  const audioObj =
-    typeof cfg.audio === "object" && cfg.audio ? cfg.audio : null;
-  const trackTitleText = cfg.ui.trackTitle || audioObj?.title || null;
-  if ($trackTitle && trackTitleText) $trackTitle.textContent = trackTitleText;
-
-  // ---- Áudio (src + download)
-  let audioSrc = null,
-    audioDownload = null;
-  if (typeof cfg.audio === "string") {
-    audioSrc = cfg.audio;
-  } else if (audioObj) {
-    audioSrc = audioObj.src || audioObj.url || audioObj.path || null;
-    audioDownload = audioObj.download || null;
+  /* ---- Artigos (cards) ---- */
+  const cardsWrap = document.querySelector(".cards");
+  if (cardsWrap && Array.isArray(cfg.articles) && cfg.articles.length) {
+    const existing = cardsWrap.querySelectorAll("article.info");
+    // Se já existem 3 cards no HTML, apenas sobrescreve textos;
+    if (existing.length && existing.length === cfg.articles.length) {
+      cfg.articles.forEach((it, i) => {
+        const h3 = existing[i].querySelector("h3");
+        const p = existing[i].querySelector("p");
+        if (h3 && it.title) h3.textContent = it.title;
+        if (p && it.text) p.textContent = it.text;
+      });
+    } else {
+      // Recria
+      cardsWrap.innerHTML = "";
+      cfg.articles.forEach((it) => {
+        const art = document.createElement("article");
+        art.className = "info";
+        art.innerHTML = `
+          <h3>${it.title ?? ""}</h3>
+          <p class="quote">${it.text ?? ""}</p>
+        `;
+        cardsWrap.appendChild(art);
+      });
+    }
   }
-  if (!audioDownload)
-    audioDownload = (cfg.links && cfg.links.download) || audioSrc || null;
 
-  const srcEl = document.getElementById("audioSource");
-  const audioEl = document.getElementById("player");
-  if (audioSrc && srcEl && audioEl) {
-    srcEl.src = audioSrc;
-    try {
-      audioEl.load();
-    } catch (_) {}
-  }
-  const $dl = document.getElementById("downloadLink");
-  if ($dl && audioDownload) $dl.href = audioDownload;
+  /* ---- Links (Brand/Spotify/CTA) ---- */
+  const brandLink = document.querySelector(".brand a");
+  if (brandLink && cfg.links?.brand) brandLink.href = cfg.links.brand;
 
-  // ---- Links
   const spotifyBtn = document.getElementById("spotifyBtn");
   if (spotifyBtn && cfg.links?.spotify) spotifyBtn.href = cfg.links.spotify;
 
   const ctaEnroll = document.getElementById("ctaEnroll");
   if (ctaEnroll && cfg.links?.cta) ctaEnroll.href = cfg.links.cta;
 
-  // ---- SEO / OpenGraph
+  /* ---- Áudio (src, download) ---- */
+  const srcEl = document.getElementById("audioSource");
+  const audio = document.getElementById("player");
+  if (cfg.audio?.src && srcEl && audio) {
+    srcEl.src = cfg.audio.src;
+    try {
+      audio.load();
+    } catch (_) {}
+  }
+  const dl = document.getElementById("downloadLink");
+  if (dl) {
+    dl.href = cfg.audio?.download || cfg.audio?.src || dl.getAttribute("href");
+    // opcional: define o nome do arquivo no atributo download
+    try {
+      const url = new URL(dl.href, window.location.href);
+      dl.setAttribute("download", url.pathname.split("/").pop() || "audio.mp3");
+    } catch (_) {}
+  }
+
+  /* ---- SEO / OpenGraph ---- */
   if (cfg.seo?.title) document.title = cfg.seo.title;
+
   const setMeta = (sel, attr, val) => {
     if (!val) return;
     let el = document.querySelector(sel);
     if (!el) {
       el = document.createElement("meta");
-      if (sel.includes("name="))
+      if (sel.includes("name=")) {
         el.setAttribute("name", sel.match(/name="(.+?)"/)[1]);
-      else if (sel.includes("property="))
+      } else if (sel.includes("property=")) {
         el.setAttribute("property", sel.match(/property="(.+?)"/)[1]);
+      }
       document.head.appendChild(el);
     }
     el.setAttribute(attr, val);
   };
+
   setMeta('meta[name="description"]', "content", cfg.seo.description);
   setMeta('meta[property="og:title"]', "content", cfg.seo.title);
   setMeta('meta[property="og:description"]', "content", cfg.seo.description);
   setMeta('meta[property="og:image"]', "content", cfg.seo.image);
 
+  // canonical
   if (cfg.seo.canonical) {
     let link = document.querySelector('link[rel="canonical"]');
     if (!link) {
@@ -178,11 +200,9 @@ function applyConfig(cfg) {
     }
     link.setAttribute("href", cfg.seo.canonical);
   }
-
-  // Notifica restante do app
-  window.dispatchEvent(new CustomEvent("cfg:applied", { detail: cfg }));
 }
 
+// inicia o carregamento assim que possível
 document.addEventListener("DOMContentLoaded", () => {
   loadConfig().catch(() => {});
 });
@@ -232,20 +252,20 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!Number.isFinite(rIdx) || rIdx < 0) rIdx = 1;
   audio.playbackRate = rates[rIdx];
   const fmtRate = (r) => (r === 1 ? "1.00x" : r.toFixed(2) + "x");
-  rateBtn.textContent = fmtRate(rates[rIdx]);
+  if (rateBtn) rateBtn.textContent = fmtRate(rates[rIdx]);
 
   const savedVol = localStorage.getItem(LS_VOL);
   if (savedVol !== null) audio.volume = Number(savedVol);
-  volume.value = audio.volume;
+  if (volume) volume.value = audio.volume;
   if (localStorage.getItem(LS_MUTED) === "1") audio.muted = true;
 
-  rateBtn.addEventListener("click", () => {
+  rateBtn?.addEventListener("click", () => {
     rIdx = (rIdx + 1) % rates.length;
     audio.playbackRate = rates[rIdx];
     rateBtn.textContent = fmtRate(rates[rIdx]);
     localStorage.setItem(LS_RATE, rates[rIdx]);
   });
-  volume.addEventListener("input", () => {
+  volume?.addEventListener("input", () => {
     audio.volume = Number(volume.value);
     localStorage.setItem(LS_VOL, String(volume.value));
   });
@@ -273,25 +293,23 @@ document.addEventListener("DOMContentLoaded", () => {
   audio.addEventListener("timeupdate", update);
 
   // ---------- Controles ----------
-  playBtn.addEventListener("click", () =>
+  playBtn?.addEventListener("click", () =>
     audio.paused ? audio.play() : audio.pause()
   );
   audio.addEventListener("play", () => {
     playBtn.textContent = "⏸ Pausar";
     playBtn.setAttribute("aria-label", "Pausar");
-    playBtn.setAttribute("aria-pressed", "true");
   });
   audio.addEventListener("pause", () => {
     playBtn.textContent = "▶ Reproduzir";
     playBtn.setAttribute("aria-label", "Reproduzir");
-    playBtn.setAttribute("aria-pressed", "false");
   });
 
-  back15.addEventListener(
+  back15?.addEventListener(
     "click",
     () => (audio.currentTime = Math.max(0, audio.currentTime - 15))
   );
-  fwd15.addEventListener(
+  fwd15?.addEventListener(
     "click",
     () =>
       (audio.currentTime = Math.min(
@@ -300,8 +318,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ))
   );
 
-  // Seek ao clicar na barra
-  document.querySelector(".progress").addEventListener("click", (e) => {
+  document.querySelector(".progress")?.addEventListener("click", (e) => {
     const r = e.currentTarget.getBoundingClientRect();
     const pct = (e.clientX - r.left) / r.width;
     audio.currentTime = pct * (audio.duration || 0);
@@ -311,33 +328,32 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("keydown", (e) => {
     if (["Space", "ArrowLeft", "ArrowRight", "Home", "End"].includes(e.code))
       e.preventDefault();
-    if (e.code === "Space") playBtn.click();
-    if (e.code === "ArrowLeft") back15.click();
-    if (e.code === "ArrowRight") fwd15.click();
+    if (e.code === "Space") playBtn?.click();
+    if (e.code === "ArrowLeft") back15?.click();
+    if (e.code === "ArrowRight") fwd15?.click();
     if (e.code === "Home") audio.currentTime = 0;
     if (e.code === "End")
       audio.currentTime = audio.duration || audio.currentTime;
   });
 
   // Compartilhar
-  if (shareBtn) {
-    shareBtn.addEventListener("click", async () => {
-      const data = {
-        title: "Audiobook — Alfabetização com significado",
-        text: "Ouça no Dom Bosco RJ",
-        url: location.href,
-      };
-      try {
-        if (navigator.share) await navigator.share(data);
-        else {
-          await navigator.clipboard.writeText(location.href);
-          toast("Link copiado.");
-        }
-      } catch (e) {}
-    });
-  }
+  shareBtn?.addEventListener("click", async () => {
+    const data = {
+      title: "Audiobook — Alfabetização com significado",
+      text: "Ouça no Dom Bosco RJ",
+      url: location.href,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(data);
+      } else {
+        await navigator.clipboard.writeText(location.href);
+        toast("Link copiado.");
+      }
+    } catch (e) {}
+  });
 
-  // Toast
+  // Mensagem de erro
   audio.addEventListener("error", () => {
     toast("Não foi possível carregar o áudio. Tente novamente.");
   });
@@ -353,11 +369,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 3000);
   }
 
-  // Media Session (atualiza conforme config/track)
-  function setMediaSession(title) {
-    if (!("mediaSession" in navigator)) return;
+  // Media Session
+  if ("mediaSession" in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: title || "Audiobook",
+      title:
+        document.getElementById("trackTitle")?.textContent?.trim() || "Faixa",
       artist: "Colégio Dom Bosco",
       album: "Audiobooks",
       artwork: [
@@ -371,24 +387,15 @@ document.addEventListener("DOMContentLoaded", () => {
     navigator.mediaSession.setActionHandler("play", () => audio.play());
     navigator.mediaSession.setActionHandler("pause", () => audio.pause());
     navigator.mediaSession.setActionHandler("seekbackward", () =>
-      back15.click()
+      back15?.click()
     );
-    navigator.mediaSession.setActionHandler("seekforward", () => fwd15.click());
+    navigator.mediaSession.setActionHandler("seekforward", () =>
+      fwd15?.click()
+    );
     navigator.mediaSession.setActionHandler("seekto", (d) => {
       if (d.seekTime != null) audio.currentTime = d.seekTime;
     });
   }
-  setMediaSession(
-    document.getElementById("trackTitle")?.textContent || "Audiobook"
-  );
-  window.addEventListener("cfg:applied", (ev) => {
-    const cfg = ev.detail || {};
-    const t =
-      cfg.ui?.trackTitle ||
-      (typeof cfg.audio === "object" && cfg.audio?.title) ||
-      document.getElementById("trackTitle")?.textContent;
-    setMediaSession(t);
-  });
 
   // ==================== Waveform (Canvas) + Peak Detector ====================
   function fitCanvas() {
@@ -402,6 +409,7 @@ document.addEventListener("DOMContentLoaded", () => {
   fitCanvas();
   window.addEventListener("resize", fitCanvas);
 
+  // Web Audio
   let ac, analyser, srcNode, freqData, timeData;
 
   function setupAudioGraph() {
@@ -410,14 +418,13 @@ document.addEventListener("DOMContentLoaded", () => {
     analyser.fftSize = 512;
     analyser.smoothingTimeConstant = 0.75;
 
-    if (srcNode) {
+    if (srcNode)
       try {
         srcNode.disconnect();
       } catch (e) {}
-    }
     srcNode = ac.createMediaElementSource(audio);
     srcNode.connect(analyser);
-    analyser.connect(ac.destination);
+    analyser.connect(ac.destination); // garante som
 
     freqData = new Uint8Array(analyser.frequencyBinCount);
     timeData = new Uint8Array(analyser.fftSize);
@@ -431,7 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (e) {}
     }
   };
-  playBtn.addEventListener("click", ensureStarted, { once: true });
+  playBtn?.addEventListener("click", ensureStarted, { once: true });
   document.addEventListener(
     "keydown",
     (e) => {
@@ -452,11 +459,13 @@ document.addEventListener("DOMContentLoaded", () => {
     grad = makeGradient();
   });
 
+  // Pico por RMS com média móvel
   let ema = 0,
     peakHold = 0;
-  let t = 0; // oscilação fake antes do play
+  let t = 0;
   const alpha = 0.07,
     PEAK_SENS = 1.45;
+
   const reduceMotion = window.matchMedia(
     "(prefers-reduced-motion: reduce)"
   ).matches;
@@ -494,12 +503,15 @@ document.addEventListener("DOMContentLoaded", () => {
       ema = (1 - alpha) * ema + alpha * rms;
       const threshold = ema * PEAK_SENS;
 
-      if (rms > threshold) peakHold = 6;
-      else if (peakHold > 0) peakHold--;
-
+      if (rms > threshold) {
+        peakHold = 6;
+      } else if (peakHold > 0) {
+        peakHold--;
+      }
       if (peakHold > 0) waveBox.classList.add("is-peak");
       else waveBox.classList.remove("is-peak");
     } else {
+      // oscilação fake antes do play
       t += 0.02;
       for (let i = 0; i < bars; i++) {
         const p = i / bars;
