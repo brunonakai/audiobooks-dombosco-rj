@@ -5,19 +5,28 @@
     "download": "assets/audio/fund1-artes_e_criatividade.mp3",
     "title": "Artes e criatividade"
   },
+
   "seo": {
     "title": "Artes e criatividade — Dom Bosco RJ",
     "description": "Audiobook: Artes e criatividade — Expressar para aprender. Colégio Dom Bosco RJ.",
-    "image": "assets/img/logo-colegio-db.png",
-    "canonical": "https://plataforma.domboscorj.com.br/audiobook/ep2"
+    "image": "assets/img/og-image.jpg",
+    "canonical": "https://plataforma.domboscorj.com.br/audiobook/ep2",
+    "url": "https://plataforma.domboscorj.com.br/audiobook/ep2",
+    "twitter": {
+      "title": "Artes e criatividade — Dom Bosco RJ",
+      "description": "Como a arte impulsiona expressão, comunicação e aprendizagem nos anos iniciais.",
+      "image": "assets/img/og-image.jpg",
+      "card": "summary_large_image"
+    }
   },
+
   "ui": {
     "kicker": "Audiobook • Anos Iniciais",
     "pageTitle": "Artes e criatividade",
     "pageSubtitle": "Expressar para aprender",
     "lead": "Como a arte impulsiona expressão, comunicação e aprendizagem nos anos iniciais. Um papo leve sobre criatividade como inteligência e o papel da escola como espaço de criação.",
     "trackTitle": "Artes e criatividade",
-    "sectionTitle": "Sobre o aprendizado"
+    "sectionTitle": "Arte que ensina"
   },
   "articles": [
     {

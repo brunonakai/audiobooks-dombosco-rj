@@ -5,12 +5,21 @@
     "download": "assets/audio/fund1-alfabetizacao_com_significado.mp3",
     "title": "Alfabetização com significado"
   },
+
   "seo": {
     "title": "Alfabetização com significado — Dom Bosco RJ",
     "description": "Audiobook: Alfabetização com significado — Ler e escrever com prazer. Colégio Dom Bosco RJ.",
-    "image": "assets/img/logo-colegio-db.png",
-    "canonical": "https://plataforma.domboscorj.com.br/audiobook/ep1"
+    "image": "assets/img/og-image.jpg",
+    "canonical": "https://plataforma.domboscorj.com.br/audiobook/ep1",
+    "url": "https://plataforma.domboscorj.com.br/audiobook/ep1",
+    "twitter": {
+      "title": "Artes e criatividade — Dom Bosco RJ",
+      "description": "Ler e criar com prazer. Audiobook do Colégio Dom Bosco RJ.",
+      "image": "assets/img/og-image.jpg",
+      "card": "summary_large_image"
+    }
   },
+
   "ui": {
     "kicker": "Audiobook • Anos Iniciais",
     "pageTitle": "Alfabetização com significado",
@@ -19,6 +28,7 @@
     "trackTitle": "Alfabetização com significado",
     "sectionTitle": "Sobre o aprendizado"
   },
+
   "articles": [
     {
       "title": "🟢 A leitura que desperta",
@@ -33,6 +43,7 @@
       "text": "“Nos anos iniciais do ensino fundamental, cada conquista é celebrada, e cada desafio é superado com apoio e incentivo.”"
     }
   ],
+
   "links": {
     "spotify": "https://open.spotify.com/episode/54okEqFZnwJU45DzF6D1Ez?si=EPPUeywnRAiL16lCd5--aQ",
     "cta": "https://domboscorj.com.br/contato",
@@ -41,6 +52,7 @@
     "ctaBtnText": "Quero matricular",
     "brand": "https://domboscorj.com.br/"
   },
+
   "contacts": {
     "phone": "+552141090710",
     "whatsapp": "+5521989886632",

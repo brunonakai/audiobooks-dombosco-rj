@@ -1,45 +1,47 @@
 // ==================== CONFIG LOADER (JSON + fallback) ====================
 async function loadConfig() {
-  // 1) Nome do config vindo do atributo data-config do <html> (preferível)
-  const htmlCfg = document.documentElement.getAttribute('data-config');
+  // 1) Nome do config via atributo data-config do <html> (preferível)
+  const htmlCfg = document.documentElement.getAttribute("data-config");
 
   // 2) Se não achar, tenta pelo nome do arquivo epN.html
   const byPath = (location.pathname.match(/\/([a-z0-9_-]+)\.html$/i) || [])[1];
 
   // 3) Ou query string ?cfg=ep1
-  const byQS = new URLSearchParams(location.search).get('cfg');
+  const byQS = new URLSearchParams(location.search).get("cfg");
 
-  const key = (htmlCfg || byQS || byPath || 'app').toLowerCase(); // 'ep1', 'app', etc.
+  const key = (htmlCfg || byQS || byPath || "app").toLowerCase(); // 'ep1', 'app', etc.
   const candidate = `assets/config/${key}.config.json?v=${Date.now()}`;
-  const fallback = `assets/config/app.config.json?v=${Date.now()}`;
+  const fallback  = `assets/config/app.config.json?v=${Date.now()}`;
 
-  // Busca com cache-busting
   let cfg = null;
+
+  // Busca do config escolhido
   try {
-    const r = await fetch(candidate, { cache: 'no-store' });
+    const r = await fetch(candidate, { cache: "no-store" });
     if (r.ok) cfg = await r.json();
   } catch (_) {}
 
-  // Fallback
+  // Fallback: app.config.json
   if (!cfg) {
-    const r = await fetch(fallback, { cache: 'no-store' });
+    const r = await fetch(fallback, { cache: "no-store" });
     if (r.ok) cfg = await r.json();
   }
 
-  if (!cfg) throw new Error('Config não encontrado.');
+  if (!cfg) throw new Error("Config não encontrado.");
+
   applyConfig(cfg);
   return cfg;
 }
 
 function setMeta(sel, attr, val) {
-  if (!val) return;
+  if (val == null || val === "") return;
   let el = document.querySelector(sel);
   if (!el) {
-    el = document.createElement('meta');
-    if (sel.includes('name=')) {
-      el.setAttribute('name', sel.match(/name="(.+?)"/)[1]);
-    } else if (sel.includes('property=')) {
-      el.setAttribute('property', sel.match(/property="(.+?)"/)[1]);
+    el = document.createElement("meta");
+    if (sel.includes('name="')) {
+      el.setAttribute("name", sel.match(/name="(.+?)"/)[1]);
+    } else if (sel.includes('property="')) {
+      el.setAttribute("property", sel.match(/property="(.+?)"/)[1]);
     }
     document.head.appendChild(el);
   }
@@ -47,116 +49,143 @@ function setMeta(sel, attr, val) {
 }
 
 function applyConfig(cfg) {
-  // ---- SEO ----
+  // ---- SEO / Social ----
+  const ogTitle = cfg.seo?.title || document.title || "";
+  const ogDesc  = cfg.seo?.description || "";
+  const ogImage = cfg.seo?.image || "";
+  const ogUrl   = cfg.seo?.url || cfg.seo?.canonical || location.href;
+
   if (cfg.seo?.title) document.title = cfg.seo.title;
-  setMeta('meta[name="description"]', 'content', cfg.seo?.description);
-  setMeta('meta[property="og:title"]', 'content', cfg.seo?.title);
-  setMeta('meta[property="og:description"]', 'content', cfg.seo?.description);
-  setMeta('meta[property="og:image"]', 'content', cfg.seo?.image);
+
+  // Description
+  setMeta('meta[name="description"]', "content", ogDesc);
+
+  // Open Graph
+  setMeta('meta[property="og:title"]',       "content", ogTitle);
+  setMeta('meta[property="og:description"]', "content", ogDesc);
+  setMeta('meta[property="og:type"]',        "content", "website");
+  setMeta('meta[property="og:image"]',       "content", ogImage);
+  setMeta('meta[property="og:url"]',         "content", ogUrl);
+
+  // Twitter (com fallback para OG)
+  const tw = cfg.seo?.twitter || {};
+  setMeta('meta[name="twitter:title"]',       "content", tw.title || ogTitle);
+  setMeta('meta[name="twitter:description"]', "content", tw.description || ogDesc);
+  setMeta('meta[name="twitter:image"]',       "content", tw.image || ogImage);
+  setMeta('meta[name="twitter:card"]',        "content", tw.card || "summary_large_image");
+
+  // Canonical
   if (cfg.seo?.canonical) {
     let link = document.querySelector('link[rel="canonical"]');
-    if (!link) { link = document.createElement('link'); link.rel = 'canonical'; document.head.appendChild(link); }
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "canonical";
+      document.head.appendChild(link);
+    }
     link.href = cfg.seo.canonical;
   }
 
   // ---- Topbar brand ----
-  const brand = cfg.links?.brand || 'https://domboscorj.com.br/';
-  const $brandA = document.getElementById('brandLink');
-  const $brandF = document.getElementById('brandLinkFooter');
+  const brand = cfg.links?.brand || "https://domboscorj.com.br/";
+  const $brandA = document.getElementById("brandLink");
+  const $brandF = document.getElementById("brandLinkFooter");
   if ($brandA) $brandA.href = brand;
   if ($brandF) $brandF.href = brand;
 
   // ---- UI textos ----
-  const $kicker = document.getElementById('kicker');
-  const $title = document.getElementById('pageTitle');
-  const $subtitle = document.getElementById('pageSubtitle');
-  const $lead = document.getElementById('lead');
-  const $track = document.getElementById('trackTitle');
-  const $sectionTitle = document.getElementById('sectionTitle');
+  const $kicker       = document.getElementById("kicker");
+  const $title        = document.getElementById("pageTitle");
+  const $subtitle     = document.getElementById("pageSubtitle");
+  const $lead         = document.getElementById("lead");
+  const $track        = document.getElementById("trackTitle");
+  const $sectionTitle = document.getElementById("sectionTitle");
 
-  if ($kicker && cfg.ui?.kicker) $kicker.textContent = cfg.ui.kicker;
-  if ($title && cfg.ui?.pageTitle) $title.textContent = cfg.ui.pageTitle;
-  if ($subtitle && cfg.ui?.pageSubtitle) $subtitle.firstChild
-      ? $subtitle.firstChild.textContent = cfg.ui.pageSubtitle
-      : $subtitle.textContent = cfg.ui.pageSubtitle;
-  if ($lead && cfg.ui?.lead) $lead.textContent = cfg.ui.lead;
-  if ($track && cfg.ui?.trackTitle) $track.textContent = cfg.ui.trackTitle;
-  if ($sectionTitle && cfg.ui?.sectionTitle) $sectionTitle.textContent = cfg.ui.sectionTitle;
+  if ($kicker      && cfg.ui?.kicker)      $kicker.textContent = cfg.ui.kicker;
+  if ($title       && cfg.ui?.pageTitle)   $title.textContent  = cfg.ui.pageTitle;
+  if ($subtitle    && cfg.ui?.pageSubtitle) {
+    $subtitle.firstChild
+      ? ($subtitle.firstChild.textContent = cfg.ui.pageSubtitle)
+      : ($subtitle.textContent = cfg.ui.pageSubtitle);
+  }
+  if ($lead        && cfg.ui?.lead)        $lead.textContent   = cfg.ui.lead;
+  if ($track       && cfg.ui?.trackTitle)  $track.textContent  = cfg.ui.trackTitle;
+  if ($sectionTitle&& cfg.ui?.sectionTitle)$sectionTitle.textContent = cfg.ui.sectionTitle;
 
   // ---- Áudio ----
-  const audio = document.getElementById('player');
-  const source = document.getElementById('audioSource');
-  const download = document.getElementById('downloadLink');
+  const audio    = document.getElementById("player");
+  const source   = document.getElementById("audioSource");
+  const download = document.getElementById("downloadLink");
 
   if (cfg.audio?.src && source) source.src = cfg.audio.src;
-  if (cfg.audio?.src && audio) { try { audio.load(); } catch(_){} }
-  if (download) download.href = cfg.audio?.download || cfg.audio?.src || '#';
+  if (cfg.audio?.src && audio) { try { audio.load(); } catch (_) {} }
+  if (download) download.href = cfg.audio?.download || cfg.audio?.src || "#";
 
   // ---- Links ----
-  const spotifyBtn = document.getElementById('spotifyBtn');
+  const spotifyBtn = document.getElementById("spotifyBtn");
   if (spotifyBtn && cfg.links?.spotify) spotifyBtn.href = cfg.links.spotify;
 
-  const cta = document.getElementById('ctaEnroll');
+  const cta = document.getElementById("ctaEnroll");
   if (cta && cfg.links?.cta) cta.href = cfg.links.cta;
-  if (document.getElementById('ctaTitle') && cfg.links?.ctaTitle)
-    document.getElementById('ctaTitle').textContent = cfg.links.ctaTitle;
-  if (document.getElementById('ctaDesc') && cfg.links?.ctaDesc)
-    document.getElementById('ctaDesc').textContent = cfg.links.ctaDesc;
-  if (document.getElementById('ctaBtnText') && cfg.links?.ctaBtnText)
-    document.getElementById('ctaBtnText').textContent = cfg.links.ctaBtnText;
+
+  if (document.getElementById("ctaTitle")   && cfg.links?.ctaTitle)
+    document.getElementById("ctaTitle").textContent   = cfg.links.ctaTitle;
+  if (document.getElementById("ctaDesc")    && cfg.links?.ctaDesc)
+    document.getElementById("ctaDesc").textContent    = cfg.links.ctaDesc;
+  if (document.getElementById("ctaBtnText") && cfg.links?.ctaBtnText)
+    document.getElementById("ctaBtnText").textContent = cfg.links.ctaBtnText;
 
   // ---- Contatos no rodapé ----
-  const phone = cfg.contacts?.phone || '';
-  const whats = cfg.contacts?.whatsapp || '';
-  const mail  = cfg.contacts?.email || '';
+  const phone = cfg.contacts?.phone    || "";
+  const whats = cfg.contacts?.whatsapp || "";
+  const mail  = cfg.contacts?.email    || "";
 
-  const linkPhone = document.getElementById('linkPhone');
-  const linkWhats = document.getElementById('linkWhats');
-  const linkMail  = document.getElementById('linkMail');
+  const linkPhone = document.getElementById("linkPhone");
+  const linkWhats = document.getElementById("linkWhats");
+  const linkMail  = document.getElementById("linkMail");
 
-  if (linkPhone && phone) { linkPhone.href = `tel:${phone}`; }
-  if (linkWhats && whats) { linkWhats.href = `https://wa.me/${whats.replace(/\D/g,'')}`; }
-  if (linkMail && mail)   { linkMail.href  = `mailto:${mail}`; }
+  if (linkPhone && phone) linkPhone.href = `tel:${phone}`;
+  if (linkWhats && whats) linkWhats.href = `https://wa.me/${whats.replace(/\D/g, "")}`;
+  if (linkMail  && mail)  linkMail.href  = `mailto:${mail}`;
 
   // ---- Artigos ----
-  const slots = document.querySelectorAll('.cards .info');
+  const slots = document.querySelectorAll(".cards .info");
   if (slots.length && Array.isArray(cfg.articles)) {
     cfg.articles.forEach((art, i) => {
       const card = slots[i];
       if (!card) return;
-      const h = card.querySelector('h3');
-      const p = card.querySelector('.quote');
-      if (h && art.title)  h.textContent = art.title;
-      if (p && art.text)   p.textContent = art.text;
+      const h = card.querySelector("h3");
+      const p = card.querySelector(".quote");
+      if (h && art.title) h.textContent = art.title;
+      if (p && art.text)  p.textContent = art.text;
     });
   }
 }
 
 // carregamento imediato
-document.addEventListener('DOMContentLoaded', () => {
-  loadConfig().catch(err => console.error(err));
+document.addEventListener("DOMContentLoaded", () => {
+  loadConfig().catch((err) => console.error(err));
 });
 
 // ==================== PLAYER + WAVEFORM (Canvas) ====================
 (() => {
-  const audio = document.getElementById("player");
+  const audio   = document.getElementById("player");
   const playBtn = document.getElementById("playPause");
-  const back15 = document.getElementById("back15");
-  const fwd15 = document.getElementById("fwd15");
-  const bar = document.getElementById("bar");
-  const cur = document.getElementById("tCur");
-  const dur = document.getElementById("tDur");
+  const back15  = document.getElementById("back15");
+  const fwd15   = document.getElementById("fwd15");
+  const bar     = document.getElementById("bar");
+  const cur     = document.getElementById("tCur");
+  const dur     = document.getElementById("tDur");
   const rateBtn = document.getElementById("rate");
-  const volume = document.getElementById("volume");
-  const shareBtn = document.getElementById("shareBtn");
+  const volume  = document.getElementById("volume");
+  const shareBtn= document.getElementById("shareBtn");
 
   const waveBox = document.querySelector(".wave");
-  const cv = document.getElementById("wave");
-  const ctx2d = cv.getContext("2d", { alpha: false });
+  const cv      = document.getElementById("wave");
+  const ctx2d   = cv.getContext("2d", { alpha: false });
 
   const PROG_KEY = "db_audiobook_progress_v6";
-  const LS_RATE = "db_rate";
-  const LS_VOL = "db_volume";
+  const LS_RATE  = "db_rate";
+  const LS_VOL   = "db_volume";
   const LS_MUTED = "db_muted";
 
   const fmt = (t) => {
@@ -167,13 +196,13 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Velocidade
-  const rates = [0.75, 1.00, 1.25, 1.50];
+  const rates = [0.75, 1.0, 1.25, 1.5];
   let rIdx = Math.max(0, rates.indexOf(Number(localStorage.getItem(LS_RATE)) || 1));
   if (!Number.isFinite(rIdx) || rIdx < 0) rIdx = 1;
   audio.playbackRate = rates[rIdx];
   const fmtRate = (r) => (r === 1 ? "1.00x" : r.toFixed(2) + "x");
   rateBtn.textContent = fmtRate(rates[rIdx]);
-  rateBtn.style.minWidth = "4.5rem";      // fixa largura para não “pular”
+  rateBtn.style.minWidth = "4.5rem";
   rateBtn.style.textAlign = "center";
 
   const savedVol = localStorage.getItem(LS_VOL);
@@ -187,10 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
     rateBtn.textContent = fmtRate(rates[rIdx]);
     localStorage.setItem(LS_RATE, rates[rIdx]);
   });
+
   volume.addEventListener("input", () => {
     audio.volume = Number(volume.value);
     localStorage.setItem(LS_VOL, String(volume.value));
   });
+
   audio.addEventListener("volumechange", () => {
     localStorage.setItem(LS_MUTED, audio.muted ? "1" : "0");
   });
@@ -213,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Controles
   playBtn.addEventListener("click", () => (audio.paused ? audio.play() : audio.pause()));
-  audio.addEventListener("play", () => { playBtn.textContent = "⏸ Pausar"; });
+  audio.addEventListener("play",  () => { playBtn.textContent = "⏸ Pausar"; });
   audio.addEventListener("pause", () => { playBtn.textContent = "▶ Reproduzir"; });
 
   back15.addEventListener("click", () => (audio.currentTime = Math.max(0, audio.currentTime - 15)));
@@ -247,7 +278,10 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       try {
         if (navigator.share) await navigator.share(data);
-        else { await navigator.clipboard.writeText(location.href); toast("Link copiado!"); }
+        else {
+          await navigator.clipboard.writeText(location.href);
+          toast("Link copiado!");
+        }
       } catch (_) {}
     });
   }
@@ -259,22 +293,27 @@ document.addEventListener('DOMContentLoaded', () => {
     t.textContent = msg;
     document.body.appendChild(t);
     requestAnimationFrame(() => t.classList.add("show"));
-    setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 300); }, 3000);
+    setTimeout(() => {
+      t.classList.remove("show");
+      setTimeout(() => t.remove(), 300);
+    }, 3000);
   }
 
   // Media Session
   if ("mediaSession" in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: document.getElementById('trackTitle')?.textContent || "Audiobook",
+      title: document.getElementById("trackTitle")?.textContent || "Audiobook",
       artist: "Colégio Dom Bosco",
       album: "Audiobooks",
       artwork: [{ src: "assets/img/logo-colegio-db.png", sizes: "512x512", type: "image/png" }]
     });
-    navigator.mediaSession.setActionHandler("play", () => audio.play());
-    navigator.mediaSession.setActionHandler("pause", () => audio.pause());
-    navigator.mediaSession.setActionHandler("seekbackward", () => back15.click());
-    navigator.mediaSession.setActionHandler("seekforward", () => fwd15.click());
-    navigator.mediaSession.setActionHandler("seekto", (d) => { if (d.seekTime != null) audio.currentTime = d.seekTime; });
+    navigator.mediaSession.setActionHandler("play",          () => audio.play());
+    navigator.mediaSession.setActionHandler("pause",         () => audio.pause());
+    navigator.mediaSession.setActionHandler("seekbackward",  () => back15.click());
+    navigator.mediaSession.setActionHandler("seekforward",   () => fwd15.click());
+    navigator.mediaSession.setActionHandler("seekto", (d) => {
+      if (d.seekTime != null) audio.currentTime = d.seekTime;
+    });
   }
 
   // ===== Waveform (com oscilação pré-play) =====
@@ -285,34 +324,43 @@ document.addEventListener('DOMContentLoaded', () => {
     cv.height = Math.max(1, Math.floor(h * dpr));
     ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-  fitCanvas(); window.addEventListener("resize", fitCanvas);
+  fitCanvas();
+  window.addEventListener("resize", fitCanvas);
 
   let ac, analyser, srcNode, freqData, timeData;
+
   function setupAudioGraph() {
     ac = ac || new (window.AudioContext || window.webkitAudioContext)();
     analyser = ac.createAnalyser();
     analyser.fftSize = 512;
     analyser.smoothingTimeConstant = 0.75;
-    if (srcNode) try { srcNode.disconnect(); } catch(_){}
+
+    if (srcNode) try { srcNode.disconnect(); } catch (_){}
+
     srcNode = ac.createMediaElementSource(audio);
     srcNode.connect(analyser);
     analyser.connect(ac.destination);
+
     freqData = new Uint8Array(analyser.frequencyBinCount);
     timeData = new Uint8Array(analyser.fftSize);
   }
 
   const ensureStarted = async () => {
     if (!ac) setupAudioGraph();
-    if (ac && ac.state === "suspended") { try { await ac.resume(); } catch(_){ } }
+    if (ac && ac.state === "suspended") {
+      try { await ac.resume(); } catch (_){}
+    }
   };
   playBtn.addEventListener("click", ensureStarted, { once: true });
-  document.addEventListener("keydown", (e) => { if (e.code === "Space") ensureStarted(); }, { once: true });
+  document.addEventListener("keydown", (e) => {
+    if (e.code === "Space") ensureStarted();
+  }, { once: true });
 
   function makeGradient() {
     const g = ctx2d.createLinearGradient(0, 0, cv.clientWidth, 0);
-    g.addColorStop(0, "#2aa5a1");
+    g.addColorStop(0,   "#2aa5a1");
     g.addColorStop(0.6, "#f6c21c");
-    g.addColorStop(1, "#ff9a2e");
+    g.addColorStop(1,   "#ff9a2e");
     return g;
   }
   let grad = makeGradient();
@@ -326,7 +374,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!reduceMotion) requestAnimationFrame(draw);
 
     const W = cv.clientWidth, H = cv.clientHeight;
-    ctx2d.fillStyle = "#0b1830"; ctx2d.fillRect(0, 0, W, H);
+    ctx2d.fillStyle = "#0b1830";
+    ctx2d.fillRect(0, 0, W, H);
 
     const bars = 64, gap = 2, bw = W / bars - gap, mid = H / 2;
     const amps = new Array(bars).fill(0);
@@ -337,15 +386,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const bin = Math.min(freqData.length - 1, Math.floor(i * (freqData.length / bars)));
         amps[i] = freqData[bin] / 255;
       }
+
       analyser.getByteTimeDomainData(timeData);
       let sumSq = 0;
       for (let i = 0; i < timeData.length; i++) {
-        const v = (timeData[i] - 128) / 128; sumSq += v * v;
+        const v = (timeData[i] - 128) / 128;
+        sumSq += v * v;
       }
       const rms = Math.sqrt(sumSq / timeData.length);
       ema = (1 - alpha) * ema + alpha * rms;
       const threshold = ema * PEAK_SENS;
-      if (rms > threshold) peakHold = 6; else if (peakHold > 0) peakHold--;
+      if (rms > threshold) peakHold = 6;
+      else if (peakHold > 0) peakHold--;
+
       waveBox.classList.toggle("is-peak", peakHold > 0);
     } else {
       // Oscilação "fake" antes do play
@@ -360,7 +413,10 @@ document.addEventListener('DOMContentLoaded', () => {
       waveBox.classList.toggle("is-peak", pulse > 0.88);
     }
 
-    ctx2d.fillStyle = grad; ctx2d.strokeStyle = "rgba(32,52,94,.6)"; ctx2d.lineWidth = 1;
+    ctx2d.fillStyle = grad;
+    ctx2d.strokeStyle = "rgba(32,52,94,.6)";
+    ctx2d.lineWidth = 1;
+
     for (let i = 0; i < bars; i++) {
       const x = i * (bw + gap);
       const base = amps[i] * (mid * 0.9);
